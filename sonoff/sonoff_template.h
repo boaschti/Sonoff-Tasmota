@@ -181,6 +181,8 @@ enum UserSelectablePins {
   GPIO_HRE_CLOCK,      // Clock/Power line for HR-E Water Meter
   GPIO_HRE_DATA,       // Data line for HR-E Water Meter
   GPIO_ADE7953_IRQ,    // ADE7953 IRQ
+  GPIO_AS608_TX,         // Serial interface AS608
+  GPIO_AS608_RX,         // Serial interface AS608
   GPIO_SENSOR_END };
 
 // Programmer selectable GPIO functionality
@@ -246,6 +248,7 @@ const char kSensorNames[] PROGMEM =
   D_SENSOR_ROTARY "1a|" D_SENSOR_ROTARY "1b|" D_SENSOR_ROTARY "2a|" D_SENSOR_ROTARY "2b|"
   D_SENSOR_HRE_CLOCK "|" D_SENSOR_HRE_DATA "|"
   D_SENSOR_ADE7953_IRQ "|"
+  D_SENSOR_AS608_TX "|" D_SENSOR_AS608_RX "|"
   ;
 
 /********************************************************************************************/
@@ -591,6 +594,10 @@ const uint8_t kGpioNiceList[] PROGMEM = {
   GPIO_SM16716_SEL,    // SM16716 SELECT
 #endif // USE_SM16716
 #ifdef ROTARY_V1
+#ifdef USE_AS608
+  GPIO_AS608_TX,
+  GPIO_AS608_RX,
+#endif // USE_AS608
   GPIO_ROT1A,          // Rotary switch1 A Pin
   GPIO_ROT1B,          // Rotary switch1 B Pin
   GPIO_ROT2A,          // Rotary switch2 A Pin
