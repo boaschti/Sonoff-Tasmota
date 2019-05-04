@@ -576,6 +576,8 @@
 #define D_SENSOR_TXD           "Serial Tx"
 #define D_SENSOR_RXD           "Serial Rx"
 #define D_SENSOR_ROTARY        "Rotary"     // Suffix "1A"
+#define D_SENSOR_AS608_TX      "AS608 TX"
+#define D_SENSOR_AS608_RX      "AS608 RX"
 
 // Units
 #define D_UNIT_AMPERE "А"
