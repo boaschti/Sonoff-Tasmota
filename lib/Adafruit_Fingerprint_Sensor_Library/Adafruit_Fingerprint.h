@@ -109,6 +109,8 @@ struct Adafruit_Fingerprint_Packet {
 ///! Helper class to communicate with and keep state for fingerprint sensors
 class Adafruit_Fingerprint {
  public:
+   uint8_t mydata[100];
+
 #if defined(__AVR__) || defined(ESP8266) || defined(FREEDOM_E300_HIFIVE1)
   Adafruit_Fingerprint(TasmotaSerial *ss, uint32_t password = 0x0);
 #endif

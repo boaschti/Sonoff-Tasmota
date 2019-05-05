@@ -19,7 +19,8 @@ TasmotaSerial mySerial(pin[GPIO_AS608_RX], pin[GPIO_AS608_TX]);
 Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
 */
 
-TasmotaSerial *mySerial = NULL;
+
+//TasmotaSerial *mySerial = NULL;
 
 bool as608selected = false;
 
@@ -30,11 +31,16 @@ void as608init(){
       as608selected = true;
     }
 
-    Adafruit_Fingerprint finger = Adafruit_Fingerprint(new TasmotaSerial(pin[GPIO_AS608_RX], pin[GPIO_AS608_TX], 1));
-
+    Adafruit_Fingerprint finger = Adafruit_Fingerprint(new TasmotaSerial(pin[GPIO_AS608_RX], pin[GPIO_AS608_TX], 0), 0x12345678);
 
     finger.begin(57600);
-    finger.verifyPassword();
+
+    if (finger.verifyPassword()){
+      snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG " AS608x found"));
+    }else{
+      snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG " AS608x not found %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X"), finger.mydata[0], finger.mydata[1], finger.mydata[2], finger.mydata[3], finger.mydata[4], finger.mydata[5], finger.mydata[6], finger.mydata[7], finger.mydata[8], finger.mydata[9], finger.mydata[10], finger.mydata[11]);
+    }
+    AddLog(LOG_LEVEL_INFO);
 
 }
 
