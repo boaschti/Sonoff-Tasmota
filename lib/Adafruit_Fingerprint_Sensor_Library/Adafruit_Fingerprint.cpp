@@ -15,6 +15,7 @@
  ****************************************************/
 
 #include "Adafruit_Fingerprint.h"
+#include <TasmotaSerial.h>
 
 //#define FINGERPRINT_DEBUG
 
@@ -102,10 +103,13 @@ boolean Adafruit_Fingerprint::verifyPassword(void) {
   return checkPassword() == FINGERPRINT_OK;
 }
 
+
+
 uint8_t Adafruit_Fingerprint::checkPassword(void) {
   GET_CMD_PACKET(FINGERPRINT_VERIFYPASSWORD,
                   (uint8_t)(thePassword >> 24), (uint8_t)(thePassword >> 16),
                   (uint8_t)(thePassword >> 8), (uint8_t)(thePassword & 0xFF));
+
   if (packet.data[0] == FINGERPRINT_OK)
     return FINGERPRINT_OK;
   else
@@ -312,25 +316,30 @@ uint8_t Adafruit_Fingerprint::getStructuredPacket(Adafruit_Fingerprint_Packet * 
       timer++;
       if( timer >= timeout) {
 #ifdef FINGERPRINT_DEBUG
-	Serial.println("Timed out");
+  //snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_DEBUG " Time out"));
+  //AddLog(LOG_LEVEL_INFO);
 #endif
 	return FINGERPRINT_TIMEOUT;
       }
     }
     byte = mySerial->read();
+      mydata[0] = idx;
+      mydata[idx+1] = byte;
 #ifdef FINGERPRINT_DEBUG
-    Serial.print("<- 0x"); Serial.println(byte, HEX);
+    //Serial.print("<- 0x"); Serial.println(byte, HEX);
+    //snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_DEBUG "<- 0x%x", byte));
+    //AddLog(LOG_LEVEL_INFO);
 #endif
     switch (idx) {
       case 0:
         if (byte != (FINGERPRINT_STARTCODE >> 8))
-	  continue;
+	         continue;
         packet->start_code = (uint16_t)byte << 8;
         break;
       case 1:
         packet->start_code |= byte;
         if (packet->start_code != FINGERPRINT_STARTCODE)
-	  return FINGERPRINT_BADPACKET;
+	           return FINGERPRINT_BADPACKET;
         break;
       case 2:
       case 3:
@@ -339,16 +348,24 @@ uint8_t Adafruit_Fingerprint::getStructuredPacket(Adafruit_Fingerprint_Packet * 
         packet->address[idx-2] = byte;
         break;
       case 6:
-	packet->type = byte;
-	break;
+      	packet->type = byte;
+      	break;
       case 7:
-	packet->length = (uint16_t)byte << 8;
-	break;
+      	packet->length = (uint16_t)byte << 8;
+      	break;
       case 8:
-	packet->length |= byte;
-	break;
+      	packet->length |= byte;
+      	break;
       default:
-        packet->data[idx-9] = byte;
+        if (idx == 9)
+        {
+            packet->data[idx-9] = 0xAB;
+        }
+        else
+        {
+          packet->data[idx-9] = byte;
+        }
+        //mydata[idx-9] = packet->data[idx-9];
         if((idx-8) == packet->length)
           return FINGERPRINT_OK;
         break;
