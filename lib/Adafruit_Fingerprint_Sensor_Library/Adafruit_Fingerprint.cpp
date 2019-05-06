@@ -323,8 +323,8 @@ uint8_t Adafruit_Fingerprint::getStructuredPacket(Adafruit_Fingerprint_Packet * 
       }
     }
     byte = mySerial->read();
-      mydata[0] = idx;
-      mydata[idx+1] = byte;
+      //mydata[0] = idx;
+      mydata[idx] = byte;
 #ifdef FINGERPRINT_DEBUG
     //Serial.print("<- 0x"); Serial.println(byte, HEX);
     //snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_DEBUG "<- 0x%x", byte));
@@ -356,19 +356,11 @@ uint8_t Adafruit_Fingerprint::getStructuredPacket(Adafruit_Fingerprint_Packet * 
       case 8:
       	packet->length |= byte;
       	break;
-      default:
-        if (idx == 9)
-        {
-            packet->data[idx-9] = 0xAB;
-        }
-        else
-        {
+        default:
           packet->data[idx-9] = byte;
-        }
-        //mydata[idx-9] = packet->data[idx-9];
-        if((idx-8) == packet->length)
-          return FINGERPRINT_OK;
-        break;
+          if((idx-8) == packet->length)
+            return FINGERPRINT_OK;
+          break;
     }
     idx++;
   }

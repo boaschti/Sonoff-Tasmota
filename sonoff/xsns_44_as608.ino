@@ -2,7 +2,7 @@
 #ifdef USE_AS608
 
 // Define driver ID
-#define XSNS_43  43
+#define XSNS_44  44
 
 #include <TasmotaSerial.h>
 #include <Adafruit_Fingerprint.h>
@@ -31,14 +31,14 @@ void as608init(){
       as608selected = true;
     }
 
-    Adafruit_Fingerprint finger = Adafruit_Fingerprint(new TasmotaSerial(pin[GPIO_AS608_RX], pin[GPIO_AS608_TX], 0), 0x12345678);
+    Adafruit_Fingerprint finger = Adafruit_Fingerprint(new TasmotaSerial(pin[GPIO_AS608_RX], pin[GPIO_AS608_TX], 0));
 
     finger.begin(57600);
 
     if (finger.verifyPassword()){
-      snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG " AS608x found"));
+      snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "AS608x found"));
     }else{
-      snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG " AS608x not found %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X"), finger.mydata[0], finger.mydata[1], finger.mydata[2], finger.mydata[3], finger.mydata[4], finger.mydata[5], finger.mydata[6], finger.mydata[7], finger.mydata[8], finger.mydata[9], finger.mydata[10], finger.mydata[11]);
+      snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "AS608x not found! Got data: %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X"), finger.mydata[0], finger.mydata[1], finger.mydata[2], finger.mydata[3], finger.mydata[4], finger.mydata[5], finger.mydata[6], finger.mydata[7], finger.mydata[8], finger.mydata[9], finger.mydata[10], finger.mydata[11]);
     }
     AddLog(LOG_LEVEL_INFO);
 
@@ -52,7 +52,7 @@ void as608everySecond(){
 
 
 /**
- * The callback function Xsns43() interfaces Tasmota with the sensor driver.
+ * The callback function Xsns44() interfaces Tasmota with the sensor driver.
  *
  * It provides the Tasmota callback IDs.
  *
@@ -67,7 +67,7 @@ void as608everySecond(){
   * Interface
  \*********************************************************************************************/
 
- bool Xsns43(uint8_t function)
+ bool Xsns44(uint8_t function)
  {
    bool result = false;
 
@@ -84,11 +84,6 @@ void as608everySecond(){
          break;
        case FUNC_SERIAL:
          break;
-
- #ifdef USE_WEBSERVER
-       case FUNC_WEB_APPEND:
-         break;
- #endif  // USE_WEBSERVER
    }
    return result;
  }

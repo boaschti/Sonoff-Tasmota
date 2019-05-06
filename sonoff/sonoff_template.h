@@ -593,11 +593,11 @@ const uint8_t kGpioNiceList[] PROGMEM = {
   GPIO_SM16716_DAT,    // SM16716 DATA
   GPIO_SM16716_SEL,    // SM16716 SELECT
 #endif // USE_SM16716
-#ifdef ROTARY_V1
 #ifdef USE_AS608
   GPIO_AS608_TX,
   GPIO_AS608_RX,
 #endif // USE_AS608
+#ifdef ROTARY_V1
   GPIO_ROT1A,          // Rotary switch1 A Pin
   GPIO_ROT1B,          // Rotary switch1 B Pin
   GPIO_ROT2A,          // Rotary switch2 A Pin
