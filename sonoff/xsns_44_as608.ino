@@ -33,7 +33,8 @@ void as608init(){
         finger->begin(57600);
 
         if (finger->verifyPassword()){
-          snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "AS60x found"));
+          finger->getTemplateCount();
+          snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "AS60x found. %i fingerprints stored."), finger->templateCount);
         }else{
           snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "AS60x not found! Got data: %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X"), finger->mydata[0], finger->mydata[1], finger->mydata[2], finger->mydata[3], finger->mydata[4], finger->mydata[5], finger->mydata[6], finger->mydata[7], finger->mydata[8], finger->mydata[9], finger->mydata[10], finger->mydata[11]);
         }
@@ -48,10 +49,35 @@ uint8_t as608Enroll(uint8_t nr){
         enrollstep = 1;
         ModellNumber = nr;
     }
-
-
     return true;
+}
 
+int deleteFingerprint(uint8_t id) {
+  uint8_t p = -1;
+
+  p = finger->deleteModel(id);
+
+  if (p == FINGERPRINT_OK) {
+    snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "Delete ok"));
+    AddLog(LOG_LEVEL_INFO);
+    return true;
+  } else if (p == FINGERPRINT_PACKETRECIEVEERR) {
+    snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "Comm error"));
+    AddLog(LOG_LEVEL_INFO);
+    return false;
+  } else if (p == FINGERPRINT_BADLOCATION) {
+    snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "Could not delete in that location"));
+    AddLog(LOG_LEVEL_INFO);
+    return false;
+  } else if (p == FINGERPRINT_FLASHERR) {
+    snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "Error writing to flash"));
+    AddLog(LOG_LEVEL_INFO);
+    return false;
+  } else {
+    snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "any error"));
+    AddLog(LOG_LEVEL_INFO);
+    return false;
+  }
 }
 
 int getFingerImage(){
@@ -278,20 +304,52 @@ bool as608Command(void){
                 snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "AS60x Enroll called #%i"), ModellNumber);
                 AddLog(LOG_LEVEL_INFO);
                 as608Enroll(ModellNumber);
-                return true;
-          }else{
-                snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "AS60x Enroll active! Cancel with: enroll reset"));
-                AddLog(LOG_LEVEL_INFO);
                 return false;
+          }else{
+                snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "AS60x Enroll active! Cancel with: enrollReset"));
+                AddLog(LOG_LEVEL_INFO);
+                return true;
           }
         }
 
-        if (!strcmp(subStr(sub_string, XdrvMailbox.data, ",", 1),"test")) { // Note 1 used for param number
-          uint8_t ModellNumber = atoi(subStr(sub_string, XdrvMailbox.data, ",", 2));  // Note 2 used for param number
-          snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "AS60x test. 2nd Par %i"), ModellNumber);
+        // reset running enroll
+        if (!strcmp(subStr(sub_string, XdrvMailbox.data, ",", 1),"enrollReset")) { // Note 1 used for param number
+          enrollstep = 0;
+          return false;
+        }
 
+        // delete one Fingerprint
+        if (!strcmp(subStr(sub_string, XdrvMailbox.data, ",", 1),"delete")) { // Note 1 used for param number
+          return deleteFingerprint(atoi(subStr(sub_string, XdrvMailbox.data, ",", 2)));  // Note 2 used for param number
+        }
+
+        // delete all Fingerprints
+        if (!strcmp(subStr(sub_string, XdrvMailbox.data, ",", 1),"deleteAll")) { // Note 1 used for param number
+          finger->emptyDatabase();
+          finger->getTemplateCount();
+          if(!finger->templateCount){
+              snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "Empty database Ok!"));
+              AddLog(LOG_LEVEL_INFO);
+              return false;
+          }else{
+              snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "Empty database Error!"));
+              AddLog(LOG_LEVEL_INFO);
+              return true;
+          }
+        }
+
+        // get number of Fingerprints
+        if (!strcmp(subStr(sub_string, XdrvMailbox.data, ",", 1),"getNumber")) { // Note 1 used for param number
+          finger->getTemplateCount();
+          snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "%i fingerprints stored."), finger->templateCount);
           AddLog(LOG_LEVEL_INFO);
-          return true;
+          return false;
+        }
+
+        if (!strcmp(subStr(sub_string, XdrvMailbox.data, ",", 1),"help")) { // Note 1 used for param number
+          snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "Commands: enroll x, enrollReset, delete x, deleteAll, getNumber"));
+          AddLog(LOG_LEVEL_INFO);
+          return false;
         }
     }
 
