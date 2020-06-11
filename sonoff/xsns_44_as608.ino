@@ -136,11 +136,10 @@ void as608Main(){
         }
 
         // found a match!
-                                             //PSTR(D_LOG_LOG "AS60x Enroll called #%i"), ModellNumber);
         snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "finger #%i found with confidence of %i"), finger->fingerID, finger->confidence);
         AddLog(LOG_LEVEL_INFO);
-        //Serial.print("Found ID #"); Serial.print(finger.fingerID);
-        //Serial.print(" with confidence of "); Serial.println(finger.confidence);
+        snprintf_P(mqtt_data, sizeof(mqtt_data), PSTR("{\"AS680_Finger\":%i, AS608_Confidence\":%i}"), finger->fingerID, finger->confidence);
+        MqttPublishPrefixTopic_P(RESULT_OR_STAT, mqtt_data);
         return;
     }else{
         // enroll is active
