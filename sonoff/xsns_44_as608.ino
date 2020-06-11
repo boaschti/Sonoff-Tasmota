@@ -12,22 +12,30 @@ bool as608selected = false;
 static uint8_t enrollstep = 0;
 static uint8_t ModellNumber = 0;
 
+//Adafruit_Fingerprint finger;
+//Adafruit_Fingerprint finger = NULL;
+Adafruit_Fingerprint *finger = NULL;
+TasmotaSerial *serial = NULL;
 
+uint8_t myFingerprint[sizeof(Adafruit_Fingerprint)];
+uint8_t myTasmotaSerial[sizeof(TasmotaSerial)];
 
 void as608init(){
 
     if ((pin[GPIO_AS608_RX] < 99) && (pin[GPIO_AS608_TX] < 99)){
 
         as608selected = true;
+        //Adafruit_Fingerprint finger = Adafruit_Fingerprint(new TasmotaSerial(pin[GPIO_AS608_RX], pin[GPIO_AS608_TX], 0));
 
-        Adafruit_Fingerprint finger = Adafruit_Fingerprint(new TasmotaSerial(pin[GPIO_AS608_RX], pin[GPIO_AS608_TX], 0));
+        serial = new (myTasmotaSerial) TasmotaSerial(pin[GPIO_AS608_RX], pin[GPIO_AS608_TX], 0);
+        finger = new (myFingerprint) Adafruit_Fingerprint(serial, 0);
 
-        finger.begin(57600);
+        finger->begin(57600);
 
-        if (finger.verifyPassword()){
+        if (finger->verifyPassword()){
           snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "AS60x found"));
         }else{
-          snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "AS60x not found! Got data: %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X"), finger.mydata[0], finger.mydata[1], finger.mydata[2], finger.mydata[3], finger.mydata[4], finger.mydata[5], finger.mydata[6], finger.mydata[7], finger.mydata[8], finger.mydata[9], finger.mydata[10], finger.mydata[11]);
+          snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "AS60x not found! Got data: %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X"), finger->mydata[0], finger->mydata[1], finger->mydata[2], finger->mydata[3], finger->mydata[4], finger->mydata[5], finger->mydata[6], finger->mydata[7], finger->mydata[8], finger->mydata[9], finger->mydata[10], finger->mydata[11]);
         }
         AddLog(LOG_LEVEL_INFO);
     }
@@ -38,6 +46,7 @@ uint8_t as608Enroll(uint8_t nr){
      // set Variable to 1rst step
     if (!enrollstep){
         enrollstep = 1;
+        ModellNumber = nr;
     }
 
 
@@ -46,16 +55,13 @@ uint8_t as608Enroll(uint8_t nr){
 }
 
 int getFingerImage(){
-  int p;
-  //p = finger.getImage();
+  int p = finger->getImage();
   switch (p) {
     case FINGERPRINT_OK:
       snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "Image taken"));
       AddLog(LOG_LEVEL_INFO);
       break;
     case FINGERPRINT_NOFINGER:
-      snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "waiting"));
-      AddLog(LOG_LEVEL_INFO);
       break;
     case FINGERPRINT_PACKETRECIEVEERR:
       snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "Comm error"));
@@ -76,7 +82,7 @@ int getFingerImage(){
 
 int convertFingerImage(uint8_t slot){
     int p;
-    //p = finger.image2Tz(slot);
+    p = finger->image2Tz(slot);
     switch (p) {
       case FINGERPRINT_OK:
         snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "Image converted"));
@@ -95,7 +101,7 @@ int convertFingerImage(uint8_t slot){
         AddLog(LOG_LEVEL_INFO);
         break;
       case FINGERPRINT_INVALIDIMAGE:
-        snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "Could not find fingerprint features"));
+        snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "Image invalid"));
         AddLog(LOG_LEVEL_INFO);
         break;
       default:
@@ -115,8 +121,27 @@ void as608Main(){
     int p;
 
     if (!enrollstep){
-      // search for Finger
+        // search for Finger
+        uint8_t p = finger->getImage();
+        if (p != FINGERPRINT_OK)  return;
 
+        p = finger->image2Tz();
+        if (p != FINGERPRINT_OK)  return;
+
+        p = finger->fingerFastSearch();
+        if (p != FINGERPRINT_OK){
+            snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "no matching finger!"));
+            AddLog(LOG_LEVEL_INFO);
+            return;
+        }
+
+        // found a match!
+                                             //PSTR(D_LOG_LOG "AS60x Enroll called #%i"), ModellNumber);
+        snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "finger #%i found with confidence of %i"), finger->fingerID, finger->confidence);
+        AddLog(LOG_LEVEL_INFO);
+        //Serial.print("Found ID #"); Serial.print(finger.fingerID);
+        //Serial.print(" with confidence of "); Serial.println(finger.confidence);
+        return;
     }else{
         // enroll is active
         switch (enrollstep){
@@ -124,6 +149,7 @@ void as608Main(){
             snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "place finger and wait"));
             AddLog(LOG_LEVEL_INFO);
             enrollstep++;
+            break;
         case 2:
         // get first image
             if (getFingerImage() == FINGERPRINT_OK){
@@ -144,16 +170,19 @@ void as608Main(){
             snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "remove finger and wait"));
             AddLog(LOG_LEVEL_INFO);
             enrollstep++;
+            break;
         case 5:
         // Remove finger
-            //p = finger.getImage();
-            if (p == FINGERPRINT_OK){
+            p = finger->getImage();
+            if (p == FINGERPRINT_NOFINGER){
                 enrollstep++;
             }
+            break;
         case 6:
-            snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "place same finger again"));
+            snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "place same finger again and wait"));
             AddLog(LOG_LEVEL_INFO);
             enrollstep++;
+            break;
         case 7:
         // get second image of finger
             if (getFingerImage() == FINGERPRINT_OK){
@@ -162,21 +191,18 @@ void as608Main(){
             break;
         case 8:
         // convert second image
-            if(convertFingerImage(2) == FINGERPRINT_OK){
-                enrollstep++;
-                break;
-            }else{
-                enrollstep--;
-                break;
+            if(convertFingerImage(2) != FINGERPRINT_OK)  {
+                snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "Not Ok. Try again."));
+                AddLog(LOG_LEVEL_INFO);
+                enrollstep -= 2;
             }
-            break;
 
         // create modell
 
             snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "creating model"));
             AddLog(LOG_LEVEL_INFO);
 
-            //p = finger.createModel();
+            p = finger->createModel();
             if (p == FINGERPRINT_OK) {
               snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "Prints matched"));
               AddLog(LOG_LEVEL_INFO);
@@ -196,7 +222,7 @@ void as608Main(){
 
         // store modell
 
-            //p = finger.storeModel(ModellNumber);
+            p = finger->storeModel(ModellNumber);
             if (p == FINGERPRINT_OK) {
               snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "Stored!"));
               AddLog(LOG_LEVEL_INFO);
@@ -219,15 +245,18 @@ void as608Main(){
               AddLog(LOG_LEVEL_INFO);
               enrollstep = 99;
             }
+            break;
         case 99:
             enrollstep = 1;
             snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "enroll starts again!"));
             AddLog(LOG_LEVEL_INFO);
+            break;
         default:
             enrollstep = 0;
             ModellNumber = 0;
             snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "oops sth went wrong"));
             AddLog(LOG_LEVEL_INFO);
+            break;
         }
     }
 }
@@ -243,9 +272,9 @@ bool as608Command(void){
 
         char sub_string[XdrvMailbox.data_len];
         // Test if enroll is active
-        if (!enrollstep){
-          // look for command enroll and get number
-          if (!strcmp(subStr(sub_string, XdrvMailbox.data, ",", 1),"enroll")) { // Note 1 used for param number
+        // look for command enroll and get number
+        if (!strcmp(subStr(sub_string, XdrvMailbox.data, ",", 1),"enroll")) {
+          if (!enrollstep){
                 uint8_t ModellNumber = atoi(subStr(sub_string, XdrvMailbox.data, ",", 2));  // Note 2 used for param number
                 snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "AS60x Enroll called #%i"), ModellNumber);
                 AddLog(LOG_LEVEL_INFO);
@@ -258,12 +287,10 @@ bool as608Command(void){
           }
         }
 
-
-
-
-
         if (!strcmp(subStr(sub_string, XdrvMailbox.data, ",", 1),"test")) { // Note 1 used for param number
-          snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "AS60x test"));
+          uint8_t ModellNumber = atoi(subStr(sub_string, XdrvMailbox.data, ",", 2));  // Note 2 used for param number
+          snprintf_P(log_data, sizeof(log_data), PSTR(D_LOG_LOG "AS60x test. 2nd Par %i"), ModellNumber);
+
           AddLog(LOG_LEVEL_INFO);
           return true;
         }
