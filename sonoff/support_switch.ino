@@ -199,6 +199,8 @@ void SwitchHandler(uint8_t mode)
         if (switchflag < 3) {
           if (!SendKey(1, i +1, switchflag)) {  // Execute command via MQTT
             ExecuteCommandPower(i +1, switchflag, SRC_SWITCH);  // Execute command internally (if i < devices_present)
+            mqtt_data[0] = '\0';
+            if (MqttShowSensor()) { MqttPublishPrefixTopic_P(2, PSTR(D_RSLT_SENSOR), Settings.flag.mqtt_sensor_retain); }
           }
         }
 
