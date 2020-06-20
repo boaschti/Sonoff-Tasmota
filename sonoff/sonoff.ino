@@ -1527,7 +1527,7 @@ void ExecuteCommandPower(uint8_t device, uint8_t state, int source)
     state &= 1;
     publish_power = 0;
   }
-  if ((device < 1) || (device > devices_present)) device = 1;
+  if ((device < 1) || (device > MAX_RELAYS)) device = 1;
   if (device <= MAX_PULSETIMERS) { SetPulseTimer(device -1, 0); }
   power_t mask = 1 << (device -1);        // Device to control
   if (state <= POWER_TOGGLE) {
